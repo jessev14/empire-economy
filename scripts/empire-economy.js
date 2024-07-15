@@ -31,7 +31,8 @@ Hooks.once('init', () => {
         default: 'Empire 3'
     });
 
-    libWrapper.register(moduleID, 'dnd5e.dataModels.actor.AttributesFields.prepareEncumbrance', newPrepareEncumbrance, 'WRAPPER');
+    const prepareEncumbrance = foundry.utils.isNewerVersion(game.system.version, '3.1.2') ? 'dnd5e.dataModels.actor.AttributesFields.prepareEncumbrance' : 'dnd5e.documents.Actor5e.prototype._prepareEncumbrance';
+    libWrapper.register(moduleID, prepareEncumbrance, newPrepareEncumbrance, 'WRAPPER');
     libWrapper.register(moduleID, 'dnd5e.dataModels.item.ContainerData.prototype.currencyWeight', newGetCurrencyWeight, 'WRAPPER');
 });
 
