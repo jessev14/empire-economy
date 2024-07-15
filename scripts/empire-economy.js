@@ -50,8 +50,8 @@ Hooks.on('renderActorSheet5eCharacter2', (app, [html], appData) => {
         const empireName = game.settings.get(moduleID, `empireName${empireID}`);
         empireSelect.innerHTML += `<option value="${empireID}" ${empireID === currentEmpire ? 'selected' : ''}>${empireName}</option>`;
     }
-    empireSelect.addEventListener('change', event => {
-        return actor.update({
+    empireSelect.addEventListener('change', async event => {
+        await actor.update({
             flags: {
                 [moduleID]: {
                     currentEmpire: event.target.value,
@@ -64,38 +64,50 @@ Hooks.on('renderActorSheet5eCharacter2', (app, [html], appData) => {
                 }
             }
         });
+
+        const containerUpdates = [];
+        for (const item of actor.items) {
+            if (item.type !== 'container') continue;
+
+            containerUpdates.push({
+                _id: item._id,
+                flags: {
+                    [moduleID]: {
+                        currentEmpire: event.target.value,
+                        [`empire${currentEmpire}`]: item.system.currency
+                    }
+                },
+                system: {
+                    currency: item.getFlag(moduleID, `empire${event.target.value}`) ?? {
+                        "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0
+                    }
+                }
+            });
+        }
+
+        await actor.updateEmbeddedDocuments('Item', containerUpdates)
     });
     html.querySelector('section.currency').appendChild(empireSelect);
 });
 
 Hooks.on('renderContainerSheet', (app, [html], appData) => {
     const { item } = app;
-    const currentEmpire = parseInt(item.getFlag(moduleID, 'currentEmpire') ?? 0);
+    const { actor } = item;
+    if (!actor) return;
+
+    const currentEmpire = parseInt(actor.getFlag(moduleID, 'currentEmpire') ?? 0);
 
     const empireSelect = document.createElement('select');
     empireSelect.name = `flags.${moduleID}.currentEmpire`;
+    empireSelect.disabled = true;
     empireSelect.style.width = '100px';
     empireSelect.style.margin = 'auto';
     empireSelect.innerHTML = ``;
+    empireSelect.dataset.tooltip = 'Change on character sheet';
     for (let empireID = 0; empireID < 3; empireID++) {
         const empireName = game.settings.get(moduleID, `empireName${empireID}`);
         empireSelect.innerHTML += `<option value="${empireID}" ${empireID === currentEmpire ? 'selected' : ''}>${empireName}</option>`;
     }
-    empireSelect.addEventListener('change', event => {
-        return item.update({
-            flags: {
-                [moduleID]: {
-                    currentEmpire: event.target.value,
-                    [`empire${currentEmpire}`]: item.system.currency
-                }
-            },
-            system: {
-                currency: item.getFlag(moduleID, `empire${event.target.value}`) ?? {
-                    "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0
-                }
-            }
-        });
-    });
     html.querySelector('ol.currency').appendChild(empireSelect);
 });
 
@@ -177,9 +189,9 @@ function newGetCurrencyWeight(wrapped) {
         };
         const count = Object.values(currency).reduce((count, value) => count + value, 0);
         const currencyPerWeight = game.settings.get("dnd5e", "metricWeightUnits")
-          ? CONFIG.DND5E.encumbrance.currencyPerWeight.metric
-          : CONFIG.DND5E.encumbrance.currencyPerWeight.imperial;
-        weight += count / currencyPerWeight;    
+            ? CONFIG.DND5E.encumbrance.currencyPerWeight.metric
+            : CONFIG.DND5E.encumbrance.currencyPerWeight.imperial;
+        weight += count / currencyPerWeight;
     }
 
     return weight;
