@@ -103,23 +103,24 @@ Hooks.on('renderContainerSheet', (app, [html], appData) => {
 function newPrepareEncumbrance(wrapped, rollData, { validateItem } = {}) {
     wrapped(rollData, validateItem);
 
+    const actor = rollData ? this.parent : this;
     if (!game.settings.get('dnd5e', 'currencyWeight')) return;
 
     const encumbrance = this.attributes?.encumbrance || this.system.attributes.encumbrance;
     if (!encumbrance) return;
 
     const config = CONFIG.DND5E.encumbrance;
-    const baseUnits = CONFIG.DND5E.encumbrance.baseUnits[this.parent.type]
+    const baseUnits = CONFIG.DND5E.encumbrance.baseUnits[actor.type]
         ?? CONFIG.DND5E.encumbrance.baseUnits.default;
     const unitSystem = game.settings.get("dnd5e", "metricWeightUnits") ? "metric" : "imperial";
 
     let weight = encumbrance.value;
 
-    const currentEmpire = parseInt(this.parent?.getFlag(moduleID, 'currentEmpire') ?? 0);
+    const currentEmpire = parseInt(actor?.getFlag(moduleID, 'currentEmpire') ?? 0);
     for (let empireID = 0; empireID < 3; empireID++) {
         if (empireID === currentEmpire) continue;
 
-        const currency = this.parent?.getFlag(moduleID, `empire${empireID}`) ?? {
+        const currency = actor?.getFlag(moduleID, `empire${empireID}`) ?? {
             "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0
         };
         const numCoins = Object.values(currency).reduce((val, denom) => val + Math.max(denom, 0), 0);
