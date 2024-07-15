@@ -105,7 +105,7 @@ function newPrepareEncumbrance(wrapped, rollData, { validateItem } = {}) {
 
     if (!game.settings.get('dnd5e', 'currencyWeight')) return;
 
-    const encumbrance = this.attributes?.encumbrance || this.system.attributes.encumbrance;
+    const encumbrance = this.attributes.encumbrance;
     if (!encumbrance) return;
 
     const config = CONFIG.DND5E.encumbrance;
