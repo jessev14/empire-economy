@@ -31,7 +31,8 @@ Hooks.once('init', () => {
         default: 'Empire 3'
     });
 
-    libWrapper.register(moduleID, 'dnd5e.dataModels.actor.AttributesFields.prepareEncumbrance', newPrepareEncumbrance, 'WRAPPER');
+    if (foundry.utils.isNewerVersion(game.system.version, '3.1.2')) libWrapper.register(moduleID, 'dnd5e.dataModels.actor.AttributesFields.prepareEncumbrance', newPrepareEncumbrance, 'WRAPPER');
+    else libWrapper.register(moduleID, 'dnd5e.documents.Actor5e.prototype._prepareEncumbrance', oldPrepareEncumbrance, 'WRAPPER');
     libWrapper.register(moduleID, 'dnd5e.dataModels.item.ContainerData.prototype.currencyWeight', newGetCurrencyWeight, 'WRAPPER');
 });
 
@@ -132,6 +133,35 @@ function newPrepareEncumbrance(wrapped, rollData, { validateItem } = {}) {
 
     encumbrance.value = weight.toNearest(0.1);
     encumbrance.pct = Math.clamp((encumbrance.value * 100) / encumbrance.max, 0, 100);
+    encumbrance.encumbered = encumbrance.value > encumbrance.heavilyEncumbered;
+}
+
+function oldPrepareEncumbrance(wrapped) {
+    wrapped();
+
+    if (!game.settings.get('dnd5e', 'currencyWeight')) return;
+
+    const config = CONFIG.DND5E.encumbrance;
+    const encumbrance = this.system.attributes.encumbrance ??= {};
+    const units = game.settings.get("dnd5e", "metricWeightUnits") ? "metric" : "imperial";
+
+    let weight = encumbrance.value;
+
+    const currentEmpire = parseInt(this?.getFlag(moduleID, 'currentEmpire') ?? 0);
+    for (let empireID = 0; empireID < 3; empireID++) {
+        if (empireID === currentEmpire) continue;
+
+        const currency = this.parent?.getFlag(moduleID, `empire${empireID}`) ?? {
+            "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0
+        };
+        const numCoins = Object.values(currency).reduce((val, denom) => val + Math.max(denom, 0), 0);
+        const currencyPerWeight = config.currencyPerWeight[units];
+        weight += numCoins / currencyPerWeight;
+    }
+
+    encumbrance.value = weight.toNearest(0.1);
+    encumbrance.pct = Math.clamped((encumbrance.value * 100) / encumbrance.max, 0, 100);
+    encumbrance.encumbered = encumbrance.value > encumbrance.heavilyEncumbered;
 }
 
 function newGetCurrencyWeight(wrapped) {
