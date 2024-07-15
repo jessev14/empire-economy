@@ -151,7 +151,7 @@ function oldPrepareEncumbrance(wrapped) {
     for (let empireID = 0; empireID < 3; empireID++) {
         if (empireID === currentEmpire) continue;
 
-        const currency = this.parent?.getFlag(moduleID, `empire${empireID}`) ?? {
+        const currency = this.getFlag(moduleID, `empire${empireID}`) ?? {
             "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0
         };
         const numCoins = Object.values(currency).reduce((val, denom) => val + Math.max(denom, 0), 0);
